@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>yavuz_bringup</name>
+  <version>1.0.0</version>
+  <description>YAVUZ AUV ana launch dosyaları ve konfigürasyonlar</description>
+  <maintainer email="l2321039010@ogr.sdu.edu.tr">Abdurrahim KAHRAMAN</maintainer>
+  <license>MIT</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>yavuz_description</depend>
+  <depend>yavuz_simulation</depend>
+  <depend>yavuz_control</depend>
+  <depend>yavuz_navigation</depend>
+  <depend>yavuz_localization</depend>
+  <exec_depend>ros_gz_sim</exec_depend>
+  <exec_depend>ros_gz_bridge</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>rviz2</exec_depend>
+  <export><build_type>ament_cmake</build_type></export>
+</package>

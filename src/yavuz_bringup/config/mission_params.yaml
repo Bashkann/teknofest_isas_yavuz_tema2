@@ -1,0 +1,105 @@
+# YAVUZ AUV - TEKNOFEST 2026 Tema 2 Görev Parametreleri
+# =========================================================
+# Bu dosya yarışma günü ipucundan alınan koordinatlarla güncellenir.
+# Simülasyon için varsayılan değerler kullanılır.
+
+mission:
+  # Görev Koordinatları (yerel Kartezyen, metre)
+  # Yarışmada: GPS → ENU dönüşümü yapılır
+  buoy:
+    x: 25.0     # Dönme şamandırası X (m)
+    y: -10.0    # Dönme şamandırası Y (m)
+    
+  end_square:
+    center_x: 45.0    # Bitiş kare merkezi X
+    center_y: 5.0     # Bitiş kare merkezi Y
+    half_size: 3.0    # Kare yarı boyutu (±3m)
+
+  # Operasyonel derinlik
+  op_depth: -3.0    # metre (negatif = aşağı)
+  
+  # Şamandıra dönüş parametreleri
+  circle:
+    radius: 3.5         # metre
+    direction: 1        # +1=CCW, -1=CW (saat yönü tersi tercih edilir)
+    completion_deg: 355  # Toleranslı tamamlanma açısı (355° ~ 360°)
+
+# PID Kazanç Parametreleri
+# Not: Simülasyon ve gerçek donanım için farklı değerler gerekebilir
+control:
+  depth:
+    kp: 15.0
+    ki: 0.8
+    kd: 3.0
+    output_min: -15.0
+    output_max: 15.0
+    integral_min: -5.0
+    integral_max: 5.0
+    deadband: 0.05      # metre
+
+  heading:
+    kp: 8.0
+    ki: 0.3
+    kd: 1.5
+    output_min: -10.0
+    output_max: 10.0
+    integral_min: -3.0
+    integral_max: 3.0
+
+  surge:
+    kp: 10.0
+    ki: 0.2
+    kd: 1.0
+    output_min: -30.0
+    output_max: 30.0
+
+  sway:
+    kp: 8.0
+    ki: 0.1
+    kd: 0.8
+    output_min: -20.0
+    output_max: 20.0
+
+# Thruster Parametreleri (DEGZ Mitras)
+thrusters:
+  max_thrust_fwd: 38.0   # N
+  max_thrust_rev: 22.0   # N
+  # Konumlar [x, y, z] metre, gövde merkezine göre
+  positions:
+    - [0.18,  0.11, 0.0]   # T0 Sol-Ön  horizontal 135°
+    - [0.18, -0.11, 0.0]   # T1 Sağ-Ön  horizontal -135°
+    - [-0.18, 0.11, 0.0]   # T2 Sol-Ark horizontal 45°
+    - [-0.18,-0.11, 0.0]   # T3 Sağ-Ark horizontal -45°
+    - [0.12,  0.22, 0.0]   # T4 Sol dikey
+    - [0.12, -0.22, 0.0]   # T5 Sağ dikey
+
+# EKF Lokalizasyon Parametreleri
+localization:
+  use_ground_truth: true    # Simülasyon: true, Gerçek: false
+  
+  # Sensör gürültüsü (gerçek donanım değerleri)
+  imu:
+    accel_noise_std: 0.021   # m/s² (BMX160 datasheet)
+    gyro_noise_std: 0.009    # rad/s
+    accel_bias_std: 0.001
+    
+  depth_sensor:
+    noise_std: 0.005         # metre (Gravity Analog basınç sensörü)
+    
+  # Ground truth simülasyon gürültüsü (gerçekçilik için eklenir)
+  simulation_noise:
+    position_std: 0.05       # metre
+    heading_std: 0.01        # radyan
+
+# Güvenlik Parametreleri
+safety:
+  mission_timeout_s: 295.0    # 5 dakika - 5 saniye güvenlik marjı
+  max_depth_m: -15.0          # Maksimum izin verilen derinlik
+  min_depth_m: 0.5            # Yüzeye çok yakın uyarı
+  emergency_stop_topic: /yavuz/emergency_stop
+
+# Loglama
+logging:
+  level: INFO
+  save_trajectory: true
+  trajectory_file: /tmp/yavuz_trajectory.csv

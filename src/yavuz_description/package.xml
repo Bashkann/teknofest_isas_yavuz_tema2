@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>yavuz_description</name>
+  <version>1.0.0</version>
+  <description>YAVUZ AUV URDF/SDF model tanımları</description>
+  <maintainer email="l2321039010@ogr.sdu.edu.tr">Abdurrahim KAHRAMAN</maintainer>
+  <license>MIT</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>robot_state_publisher</depend>
+  <depend>joint_state_publisher</depend>
+  <depend>xacro</depend>
+  <export><build_type>ament_cmake</build_type></export>
+</package>

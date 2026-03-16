@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>yavuz_control</name>
+  <version>1.0.0</version>
+  <description>YAVUZ AUV PID kontrolcüleri ve thruster allocator</description>
+  <maintainer email="l2321039010@ogr.sdu.edu.tr">Abdurrahim KAHRAMAN</maintainer>
+  <license>MIT</license>
+  <buildtool_depend>ament_python</buildtool_depend>
+  <depend>rclpy</depend>
+  <depend>std_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <export><build_type>ament_python</build_type></export>
+</package>

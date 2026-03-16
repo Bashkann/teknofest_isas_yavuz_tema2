@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>yavuz_simulation</name>
+  <version>1.0.0</version>
+  <description>YAVUZ AUV Gazebo Harmonic simülasyon dünyası</description>
+  <maintainer email="l2321039010@ogr.sdu.edu.tr">Abdurrahim KAHRAMAN</maintainer>
+  <license>MIT</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>ros_gz_sim</depend>
+  <depend>ros_gz_bridge</depend>
+  <export><build_type>ament_cmake</build_type></export>
+</package>

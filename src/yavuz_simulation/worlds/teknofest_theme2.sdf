@@ -1,0 +1,358 @@
+<?xml version="1.0" ?>
+<!--
+  YAVUZ AUV - TEKNOFEST 2026 - İleri Kategori Tema 2
+  Otonom Navigasyon, İntikal ve Kontrollü Alan Geçişi
+  
+  Gazebo Harmonic (SDFormat 1.10) Dünyası
+  
+  PARKUR DÜZENİ:
+    - İskele (Başlangıç): [0, 0, 0]
+    - Dönme Şamandırası (kırmızı): [25, -10, 0]
+    - Bitiş Kare Merkezi: [45, 5, 0]
+    - Kare Köşeleri (±3m): [42,2] [42,8] [48,2] [48,8]
+    
+  Araç yolu:
+    İskele → (su altı) → Şamandıra etrafı dönüş → (su altı) → Kare içinde su üstüne çıkış
+-->
+<sdf version="1.10">
+  <world name="teknofest_theme2">
+
+    <!-- ============ FİZİK ============ -->
+    <physics name="default_physics" default="true" type="ode">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+      <real_time_update_rate>1000</real_time_update_rate>
+      <ode>
+        <solver>
+          <type>quick</type>
+          <iters>50</iters>
+          <sor>1.3</sor>
+        </solver>
+        <constraints>
+          <cfm>0.0</cfm>
+          <erp>0.2</erp>
+          <contact_max_correcting_vel>0.1</contact_max_correcting_vel>
+          <contact_surface_layer>0.001</contact_surface_layer>
+        </constraints>
+      </ode>
+    </physics>
+
+    <!-- ============ IŞIK & ATMOSFER ============ -->
+    <light name="sun" type="directional">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 100 0 0 0</pose>
+      <diffuse>0.7 0.7 0.7 1</diffuse>
+      <specular>0.1 0.1 0.1 1</specular>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <!-- Sönük su altı ambient ışığı -->
+    <light name="underwater_ambient" type="point">
+      <pose>25 0 -5 0 0 0</pose>
+      <diffuse>0.2 0.3 0.5 1</diffuse>
+      <specular>0.0 0.0 0.0 1</specular>
+      <attenuation>
+        <range>50</range>
+        <linear>0.1</linear>
+        <constant>0.5</constant>
+        <quadratic>0.01</quadratic>
+      </attenuation>
+    </light>
+
+    <!-- ============ PLUGİNLER ============ -->
+    <!-- Kıyafet fiziksel simülasyonu -->
+    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics"/>
+    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands"/>
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"/>
+    <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+    <plugin filename="gz-sim-imu-system" name="gz::sim::systems::Imu"/>
+    <plugin filename="gz-sim-altimeter-system" name="gz::sim::systems::Altimeter"/>
+    <plugin filename="gz-sim-magnetometer-system" name="gz::sim::systems::Magnetometer"/>
+
+    <!-- Kaldırma kuvveti (Buoyancy) PLUGİNİ -->
+    <plugin filename="gz-sim-buoyancy-system" name="gz::sim::systems::Buoyancy">
+      <graded_buoyancy>
+        <default_density>1000</default_density>
+        <density_change>
+          <!-- Su yüzeyi z=0'da -->
+          <above_depth>0</above_depth>
+          <density>1.0</density>
+        </density_change>
+      </graded_buoyancy>
+    </plugin>
+
+    <!-- ============ ZEMIN (DENİZ TABANI) ============ -->
+    <model name="seabed">
+      <static>true</static>
+      <link name="seabed_link">
+        <pose>25 0 -15 0 0 0</pose>
+        <collision name="seabed_collision">
+          <geometry>
+            <box><size>120 80 0.5</size></box>
+          </geometry>
+          <surface>
+            <friction>
+              <ode><mu>0.5</mu><mu2>0.5</mu2></ode>
+            </friction>
+          </surface>
+        </collision>
+        <visual name="seabed_visual">
+          <geometry>
+            <box><size>120 80 0.5</size></box>
+          </geometry>
+          <material>
+            <ambient>0.4 0.35 0.25 1</ambient>
+            <diffuse>0.5 0.45 0.3 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ============ SU YÜZEYI (GÖRSELLİK) ============ -->
+    <model name="water_surface">
+      <static>true</static>
+      <link name="water_link">
+        <pose>25 0 0 0 0 0</pose>
+        <visual name="water_visual">
+          <geometry>
+            <box><size>120 80 0.1</size></box>
+          </geometry>
+          <material>
+            <ambient>0.0 0.3 0.6 0.5</ambient>
+            <diffuse>0.0 0.4 0.7 0.5</diffuse>
+            <specular>0.5 0.5 0.5 1</specular>
+          </material>
+          <transparency>0.5</transparency>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ============ İSKELE (BAŞLANGIÇ) ============ -->
+    <model name="iskele">
+      <static>true</static>
+      <pose>0 0 0 0 0 0</pose>
+      <link name="iskele_link">
+        <!-- Platform -->
+        <visual name="platform">
+          <pose>0 0 0.25 0 0 0</pose>
+          <geometry><box><size>4 4 0.3</size></box></geometry>
+          <material>
+            <ambient>0.4 0.25 0.1 1</ambient>
+            <diffuse>0.6 0.4 0.2 1</diffuse>
+          </material>
+        </visual>
+        <collision name="platform_col">
+          <pose>0 0 0.25 0 0 0</pose>
+          <geometry><box><size>4 4 0.3</size></box></geometry>
+        </collision>
+        <!-- BAŞLANGIÇ etiketi görseli (sarı işaret) -->
+        <visual name="start_marker">
+          <pose>0 0 0.42 0 0 0</pose>
+          <geometry><cylinder><radius>0.5</radius><length>0.02</length></cylinder></geometry>
+          <material><ambient>1 1 0 1</ambient><diffuse>1 1 0 1</diffuse></material>
+        </visual>
+        <!-- Direkler -->
+        <visual name="post1">
+          <pose>1.8 1.8 1 0 0 0</pose>
+          <geometry><cylinder><radius>0.05</radius><length>2</length></cylinder></geometry>
+          <material><ambient>0.5 0.5 0.5 1</ambient><diffuse>0.7 0.7 0.7 1</diffuse></material>
+        </visual>
+        <visual name="post2">
+          <pose>-1.8 1.8 1 0 0 0</pose>
+          <geometry><cylinder><radius>0.05</radius><length>2</length></cylinder></geometry>
+          <material><ambient>0.5 0.5 0.5 1</ambient><diffuse>0.7 0.7 0.7 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ============ DÖNME ŞAMANDIRASI (Kırmızı) ============ -->
+    <!-- Koordinat: (25, -10) - şamandıra yüzeyde, halatla tabana bağlı -->
+    <model name="rotation_buoy">
+      <static>false</static>
+      <pose>25 -10 0.3 0 0 0</pose>
+      <link name="buoy_link">
+        <inertial>
+          <mass>5.0</mass>
+          <inertia>
+            <ixx>0.05</ixx><ixy>0</ixy><ixz>0</ixz>
+            <iyy>0.05</iyy><iyz>0</iyz><izz>0.08</izz>
+          </inertia>
+        </inertial>
+        <!-- Şamandıra gövdesi (kırmızı silindir) -->
+        <visual name="buoy_body">
+          <geometry><cylinder><radius>0.35</radius><length>0.6</length></geometry>
+          <material>
+            <ambient>0.9 0.1 0.1 1</ambient>
+            <diffuse>1.0 0.0 0.0 1</diffuse>
+            <specular>0.3 0.3 0.3 1</specular>
+          </material>
+        </visual>
+        <collision name="buoy_col">
+          <geometry><cylinder><radius>0.35</radius><length>0.6</length></geometry>
+        </collision>
+        <!-- Şamandıra üst ışık markeri -->
+        <visual name="buoy_light">
+          <pose>0 0 0.35 0 0 0</pose>
+          <geometry><sphere><radius>0.1</radius></sphere></geometry>
+          <material><ambient>1 0.5 0.5 1</ambient><diffuse>1 0.5 0.5 1</diffuse></material>
+        </visual>
+        <!-- Kaldırma kuvveti için buoyancy volume etiketi -->
+        <buoyancy_volume>
+          <volume>0.2311</volume> <!-- π * 0.35² * 0.6 -->
+        </buoyancy_volume>
+      </link>
+      <!-- Zemine bağlı halat (kısıtlama) -->
+      <joint name="buoy_anchor" type="prismatic">
+        <parent>world</parent>
+        <child>buoy_link</child>
+        <axis>
+          <xyz>0 0 1</xyz>
+          <limit><lower>-0.3</lower><upper>0.3</upper></limit>
+        </axis>
+      </joint>
+    </model>
+
+    <!-- ============ BİTİŞ KARESİ - 4 KÖŞE ŞAMANDIRA + MERKEZ ============ -->
+    <!-- Kare merkezi: (45, 5), boyut: 6x6m, her köşede şamandıra -->
+    
+    <!-- Şamandıra 1: Sol-Arka köşe (42, 2) -->
+    <model name="corner_buoy_1">
+      <static>true</static>
+      <pose>42 2 0.3 0 0 0</pose>
+      <link name="link">
+        <visual name="v">
+          <geometry><sphere><radius>0.25</radius></sphere></geometry>
+          <material><ambient>1 0.6 0 1</ambient><diffuse>1 0.6 0 1</diffuse></material>
+        </visual>
+        <collision name="c">
+          <geometry><sphere><radius>0.25</radius></sphere></geometry>
+        </collision>
+      </link>
+    </model>
+
+    <!-- Şamandıra 2: Sol-Ön köşe (42, 8) -->
+    <model name="corner_buoy_2">
+      <static>true</static>
+      <pose>42 8 0.3 0 0 0</pose>
+      <link name="link">
+        <visual name="v">
+          <geometry><sphere><radius>0.25</radius></sphere></geometry>
+          <material><ambient>1 0.6 0 1</ambient><diffuse>1 0.6 0 1</diffuse></material>
+        </visual>
+        <collision name="c">
+          <geometry><sphere><radius>0.25</radius></sphere></geometry>
+        </collision>
+      </link>
+    </model>
+
+    <!-- Şamandıra 3: Sağ-Arka köşe (48, 2) -->
+    <model name="corner_buoy_3">
+      <static>true</static>
+      <pose>48 2 0.3 0 0 0</pose>
+      <link name="link">
+        <visual name="v">
+          <geometry><sphere><radius>0.25</radius></sphere></geometry>
+          <material><ambient>1 0.6 0 1</ambient><diffuse>1 0.6 0 1</diffuse></material>
+        </visual>
+        <collision name="c">
+          <geometry><sphere><radius>0.25</radius></sphere></geometry>
+        </collision>
+      </link>
+    </model>
+
+    <!-- Şamandıra 4: Sağ-Ön köşe (48, 8) -->
+    <model name="corner_buoy_4">
+      <static>true</static>
+      <pose>48 8 0.3 0 0 0</pose>
+      <link name="link">
+        <visual name="v">
+          <geometry><sphere><radius>0.25</radius></sphere></geometry>
+          <material><ambient>1 0.6 0 1</ambient><diffuse>1 0.6 0 1</diffuse></material>
+        </visual>
+        <collision name="c">
+          <geometry><sphere><radius>0.25</radius></sphere></geometry>
+        </collision>
+      </link>
+    </model>
+
+    <!-- Merkez şamandırası (sarı) -->
+    <model name="center_buoy">
+      <static>true</static>
+      <pose>45 5 0.3 0 0 0</pose>
+      <link name="link">
+        <visual name="v">
+          <geometry><sphere><radius>0.3</radius></sphere></geometry>
+          <material><ambient>1 1 0 1</ambient><diffuse>1 1 0 1</diffuse></material>
+        </visual>
+        <collision name="c">
+          <geometry><sphere><radius>0.3</radius></sphere></geometry>
+        </collision>
+      </link>
+    </model>
+
+    <!-- Köşe şamandıraları arası görsel ip (8 adet çubuk) -->
+    <!-- Sol kenar: (42,2)→(42,8) -->
+    <model name="rope_left">
+      <static>true</static>
+      <pose>42 5 0.3 0 0 0</pose>
+      <link name="link">
+        <visual name="v">
+          <geometry><box><size>0.05 6 0.05</size></box></geometry>
+          <material><ambient>0.8 0.6 0.2 1</ambient></material>
+        </visual>
+      </link>
+    </model>
+    <!-- Sağ kenar: (48,2)→(48,8) -->
+    <model name="rope_right">
+      <static>true</static>
+      <pose>48 5 0.3 0 0 0</pose>
+      <link name="link">
+        <visual name="v">
+          <geometry><box><size>0.05 6 0.05</size></box></geometry>
+          <material><ambient>0.8 0.6 0.2 1</ambient></material>
+        </visual>
+      </link>
+    </model>
+    <!-- Ön kenar: (42,8)→(48,8) -->
+    <model name="rope_front">
+      <static>true</static>
+      <pose>45 8 0.3 0 0 0</pose>
+      <link name="link">
+        <visual name="v">
+          <geometry><box><size>6 0.05 0.05</size></box></geometry>
+          <material><ambient>0.8 0.6 0.2 1</ambient></material>
+        </visual>
+      </link>
+    </model>
+    <!-- Arka kenar: (42,2)→(48,2) -->
+    <model name="rope_back">
+      <static>true</static>
+      <pose>45 2 0.3 0 0 0</pose>
+      <link name="link">
+        <visual name="v">
+          <geometry><box><size>6 0.05 0.05</size></box></geometry>
+          <material><ambient>0.8 0.6 0.2 1</ambient></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ============ DENİZ TABANI REFERANS İŞARETLERİ ============ -->
+    <!-- Navigasyon yardımcı zemin işaretleri (gerçek yarışmada yok, sadece sim için) -->
+    <model name="path_marker_1">
+      <static>true</static>
+      <pose>12 -5 -14.5 0 0 0</pose>
+      <link name="link">
+        <visual name="v">
+          <geometry><box><size>1 1 0.1</size></box></geometry>
+          <material><ambient>0 0.8 0.8 0.5</ambient><diffuse>0 0.8 0.8 0.5</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ============ SPAWN POİNT (Araç başlangıç konumu) ============ -->
+    <!-- Araç iskelede başlar, z=0.1 (suda) -->
+
+  </world>
+</sdf>
