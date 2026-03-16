@@ -2,39 +2,25 @@
 """
 YAVUZ AUV - Ana Simülasyon Launch Dosyası
 Gazebo Harmonic + ROS2 Jazzy
-
-Başlatır:
-  1. Gazebo Harmonic (teknofest_theme2.sdf dünyası)
-  2. Robot State Publisher (URDF yayını)
-  3. ROS-GZ Bridge (Gazebo↔ROS2 köprüsü)
-  4. EKF Lokalizasyon düğümü
-  5. (Opsiyonel) Otonom görev düğümü
 """
 
 import os
-from pathlib import Path
 
 from launch import LaunchDescription
 from launch.actions import (
     DeclareLaunchArgument,
-    IncludeLaunchDescription,
     ExecuteProcess,
     TimerAction,
-    RegisterEventHandler,
     LogInfo,
-    GroupAction,
 )
 from launch.conditions import IfCondition, UnlessCondition
-from launch.event_handlers import OnProcessExit, OnProcessStart
-from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import (
     LaunchConfiguration,
-    PathJoinSubstitution,
     Command,
     FindExecutable,
 )
-from launch_ros.actions import Node, SetParameter
-from launch_ros.substitutions import FindPackageShare
+from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 from ament_index_python.packages import get_package_share_directory
 
 
@@ -49,60 +35,41 @@ def generate_launch_description():
     world_arg = DeclareLaunchArgument(
         'world',
         default_value=os.path.join(yavuz_sim, 'worlds', 'teknofest_theme2.sdf'),
-        description='Gazebo dünya dosyası'
+        description='Gazebo dunya dosyasi'
     )
     gz_gui_arg = DeclareLaunchArgument(
         'gz_gui', default_value='true',
-        description='Gazebo GUI başlat (false=headless)'
+        description='Gazebo GUI baslat'
     )
-    spawn_x_arg = DeclareLaunchArgument('spawn_x', default_value='0.0')
-    spawn_y_arg = DeclareLaunchArgument('spawn_y', default_value='0.0')
-    spawn_z_arg = DeclareLaunchArgument('spawn_z', default_value='-0.5',
-                                        description='Başlangıç derinliği')
-    start_mission_arg = DeclareLaunchArgument(
-        'start_mission', default_value='false',
-        description='Simülasyon başladığında görevi otomatik başlat'
-    )
-    buoy_x_arg  = DeclareLaunchArgument('buoy_x',  default_value='25.0')
-    buoy_y_arg  = DeclareLaunchArgument('buoy_y',  default_value='-10.0')
-    end_x_arg   = DeclareLaunchArgument('end_x',   default_value='45.0')
-    end_y_arg   = DeclareLaunchArgument('end_y',   default_value='5.0')
-    use_gt_arg  = DeclareLaunchArgument(
-        'use_ground_truth', default_value='true',
-        description='Simülasyonda ground truth kullan'
-    )
+    spawn_x_arg       = DeclareLaunchArgument('spawn_x', default_value='0.0')
+    spawn_y_arg       = DeclareLaunchArgument('spawn_y', default_value='0.0')
+    spawn_z_arg       = DeclareLaunchArgument('spawn_z', default_value='-0.5')
+    start_mission_arg = DeclareLaunchArgument('start_mission', default_value='false')
+    buoy_x_arg        = DeclareLaunchArgument('buoy_x',  default_value='25.0')
+    buoy_y_arg        = DeclareLaunchArgument('buoy_y',  default_value='-10.0')
+    end_x_arg         = DeclareLaunchArgument('end_x',   default_value='45.0')
+    end_y_arg         = DeclareLaunchArgument('end_y',   default_value='5.0')
+    use_gt_arg        = DeclareLaunchArgument('use_ground_truth', default_value='true')
 
     # ——— Yapılandırma değişkenleri ———
-    world          = LaunchConfiguration('world')
-    gz_gui         = LaunchConfiguration('gz_gui')
-    spawn_x        = LaunchConfiguration('spawn_x')
-    spawn_y        = LaunchConfiguration('spawn_y')
-    spawn_z        = LaunchConfiguration('spawn_z')
-    start_mission  = LaunchConfiguration('start_mission')
-    use_gt         = LaunchConfiguration('use_ground_truth')
+    world         = LaunchConfiguration('world')
+    gz_gui        = LaunchConfiguration('gz_gui')
+    spawn_x       = LaunchConfiguration('spawn_x')
+    spawn_y       = LaunchConfiguration('spawn_y')
+    spawn_z       = LaunchConfiguration('spawn_z')
+    start_mission = LaunchConfiguration('start_mission')
+    use_gt        = LaunchConfiguration('use_ground_truth')
 
     # ——— URDF / Xacro ———
     urdf_file = os.path.join(yavuz_desc, 'urdf', 'yavuz_auv.urdf.xacro')
-    robot_description = Command([
-        FindExecutable(name='xacro'), ' ', urdf_file
-    ])
+    robot_description = ParameterValue(
+        Command([FindExecutable(name='xacro'), ' ', urdf_file]),
+        value_type=str
+    )
 
     # ══════════════════════════════════════════════════════════
     # 1. GAZEBO HARMONIC
     # ══════════════════════════════════════════════════════════
-    gz_sim = ExecuteProcess(
-        cmd=[
-            'gz', 'sim',
-            world,
-            '--ros-args',
-        ],
-        additional_env={
-            'GZ_SIM_RESOURCE_PATH': os.path.join(yavuz_sim, 'models'),
-        },
-        output='screen'
-    )
-
-    # GUI versiyonu (varsayılan)
     gz_sim_gui = ExecuteProcess(
         cmd=['gz', 'sim', world],
         additional_env={
@@ -133,10 +100,10 @@ def generate_launch_description():
     )
 
     # ══════════════════════════════════════════════════════════
-    # 3. ARAÇ SPAWN (Gazebo'ya yerleştir)
+    # 3. ARAÇ SPAWN
     # ══════════════════════════════════════════════════════════
     spawn_entity = TimerAction(
-        period=3.0,  # Gazebo hazır olana kadar bekle
+        period=3.0,
         actions=[
             Node(
                 package='ros_gz_sim',
@@ -158,24 +125,10 @@ def generate_launch_description():
     # ══════════════════════════════════════════════════════════
     # 4. ROS-GZ KÖPRÜSÜ
     # ══════════════════════════════════════════════════════════
-    bridge_config = os.path.join(yavuz_desc, 'config', 'gz_bridge.yaml')
-    
     ros_gz_bridge = Node(
         package='ros_gz_bridge',
         executable='parameter_bridge',
         name='gz_ros_bridge',
-        output='screen',
-        parameters=[{
-            'use_sim_time': True,
-            'config_file': bridge_config,
-        }],
-    )
-
-    # IMU bridge (manual tanım - yaml yoksa fallback)
-    ros_gz_bridge_manual = Node(
-        package='ros_gz_bridge',
-        executable='parameter_bridge',
-        name='gz_ros_bridge_manual',
         output='screen',
         parameters=[{'use_sim_time': True}],
         arguments=[
@@ -211,7 +164,7 @@ def generate_launch_description():
     )
 
     # ══════════════════════════════════════════════════════════
-    # 6. GÖREV DÜĞÜMÜ (opsiyonel otomatik başlatma)
+    # 6. GÖREV DÜĞÜMÜ
     # ══════════════════════════════════════════════════════════
     mission_node = TimerAction(
         period=7.0,
@@ -233,7 +186,7 @@ def generate_launch_description():
     )
 
     # ══════════════════════════════════════════════════════════
-    # 7. RVIZ2 GÖRSELLEŞTİRME
+    # 7. RVIZ2
     # ══════════════════════════════════════════════════════════
     rviz_config = os.path.join(yavuz_nav, 'config', 'yavuz_rviz.rviz')
     rviz_node = TimerAction(
@@ -258,24 +211,23 @@ def generate_launch_description():
         start_mission_arg, use_gt_arg,
         buoy_x_arg, buoy_y_arg, end_x_arg, end_y_arg,
 
-        # Bilgi mesajı
+        # Bilgi
         LogInfo(msg="\n" + "="*50 +
-               "\n YAVUZ AUV Simülasyonu Başlatılıyor..." +
-               "\n TEKNOFEST 2026 - İleri Kategori Tema 2" +
+               "\n YAVUZ AUV Simulasyonu Baslatiliyor..." +
+               "\n TEKNOFEST 2026 - Ileri Kategori Tema 2" +
                "\n" + "="*50),
 
-        # Düğümler
+        # Dugumler
         robot_state_pub,
         gz_sim_gui,
         gz_sim_headless,
         spawn_entity,
-        ros_gz_bridge_manual,
+        ros_gz_bridge,
         ekf_node,
         mission_node,
         rviz_node,
 
-        # Son bilgi
-        LogInfo(msg="Görev başlatmak için:\n"
-               "  ros2 topic pub /yavuz/mission/command std_msgs/msg/String "
-               "'{data: start}' --once"),
+        LogInfo(msg="Gorev baslatmak icin:\n"
+               "  ros2 topic pub /yavuz/mission/command "
+               "std_msgs/msg/String '{data: start}' --once"),
     ])
